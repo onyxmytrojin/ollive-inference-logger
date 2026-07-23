@@ -8,12 +8,15 @@ from rest_framework import status as http_status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Conversation, Message
+from .models import Conversation, ConversationGroup, Message
 from .serializers import (
     ChatRequestSerializer,
     ConversationDetailSerializer,
+    ConversationGroupAssignSerializer,
+    ConversationGroupSerializer,
     ConversationListSerializer,
     ConversationRenameSerializer,
+    GroupCreateSerializer,
 )
 from .services.groq_client import complete_chat, generate_title, stream_chat
 
@@ -262,3 +265,41 @@ class ConversationRegenerateView(APIView):
         response["Cache-Control"] = "no-cache"
         response["X-Accel-Buffering"] = "no"
         return response
+
+
+class GroupListCreateView(APIView):
+    """Sidebar folders for organizing conversations. Deleting a group leaves
+    its conversations in place, just ungrouped (see ConversationGroup.group's
+    on_delete=SET_NULL)."""
+
+    def get(self, request):
+        groups = ConversationGroup.objects.all()
+        return Response(ConversationGroupSerializer(groups, many=True).data)
+
+    def post(self, request):
+        serializer = GroupCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        group = ConversationGroup.objects.create(name=serializer.validated_data["name"])
+        return Response(ConversationGroupSerializer(group).data, status=http_status.HTTP_201_CREATED)
+
+
+class GroupDeleteView(APIView):
+    def delete(self, request, group_id):
+        group = get_object_or_404(ConversationGroup, id=group_id)
+        group.delete()
+        return Response(status=http_status.HTTP_204_NO_CONTENT)
+
+
+class ConversationGroupAssignView(APIView):
+    def post(self, request, conversation_id):
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+        serializer = ConversationGroupAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        group_id = serializer.validated_data.get("group_id")
+
+        if group_id:
+            conversation.group = get_object_or_404(ConversationGroup, id=group_id)
+        else:
+            conversation.group = None
+        conversation.save(update_fields=["group"])
+        return Response(ConversationListSerializer(conversation).data)
