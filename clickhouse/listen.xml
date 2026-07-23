@@ -1,0 +1,6 @@
+<clickhouse>
+    <!-- The default image config listens on "::" (IPv6 wildcard), which fails to
+         bind on networks without IPv6 support (e.g. some Docker Desktop setups).
+         replace="1" fully overrides rather than appending another listen_host. -->
+    <listen_host replace="1">0.0.0.0</listen_host>
+</clickhouse>
