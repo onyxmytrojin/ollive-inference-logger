@@ -49,3 +49,42 @@ def stream_chat(*, messages, model):
             "usage": usage,
             "finish_reason": choice.finish_reason if choice else None,
         }
+
+
+TITLE_SYSTEM_PROMPT = (
+    "Generate a short, specific title (3-6 words, no quotes, no trailing "
+    "punctuation) summarizing what this conversation is about."
+)
+
+
+@log_inference(provider="groq")
+def _complete_title(*, messages, model):
+    completion = _client.chat.completions.create(model=model, messages=messages, max_tokens=20)
+    choice = completion.choices[0]
+    usage = completion.usage
+
+    return {
+        "output": (choice.message.content or "").strip().strip('"'),
+        "prompt_tokens": usage.prompt_tokens if usage else None,
+        "completion_tokens": usage.completion_tokens if usage else None,
+        "total_tokens": usage.total_tokens if usage else None,
+        "metadata": {
+            "purpose": "title_generation",
+            "finish_reason": choice.finish_reason,
+        },
+    }
+
+
+def generate_title(user_message, assistant_message, model, conversation_id=None):
+    # A real inference call in its own right (costs tokens, hits the same
+    # provider), so it goes through the same @log_inference path as chat
+    # completions — tagged via metadata.purpose so it's distinguishable on
+    # the dashboard rather than being hidden from the observability pipeline.
+    return _complete_title(
+        messages=[
+            {"role": "system", "content": TITLE_SYSTEM_PROMPT},
+            {"role": "user", "content": f"User: {user_message}\nAssistant: {assistant_message}"},
+        ],
+        model=model,
+        conversation_id=conversation_id,
+    )["output"]

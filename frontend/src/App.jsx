@@ -233,7 +233,7 @@ export default function App() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
 
-        <div className="sidebar-lists">
+        <div className="sidebar-lists thin-scroll">
           <ul className="conversation-list">
             {activeConversations.map((c) => (
               <ConversationItem
@@ -294,7 +294,7 @@ export default function App() {
             )}
           </header>
 
-          <div className="messages">
+          <div className="messages thin-scroll">
             {messages.map((m, i) => (
               <MessageBubble
                 key={m.id}

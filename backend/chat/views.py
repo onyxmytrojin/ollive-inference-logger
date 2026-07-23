@@ -15,7 +15,7 @@ from .serializers import (
     ConversationListSerializer,
     ConversationRenameSerializer,
 )
-from .services.groq_client import complete_chat, stream_chat
+from .services.groq_client import complete_chat, generate_title, stream_chat
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,18 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data, default=str)}\n\n"
 
 
-def _stream_assistant_reply(conversation, history, user_message_id):
+def _generate_title_for(conversation, user_text, assistant_text):
+    try:
+        title = generate_title(
+            user_text, assistant_text, settings.GROQ_MODEL, conversation_id=str(conversation.id)
+        )
+        if title:
+            conversation.title = title[:200]
+    except Exception:
+        logger.warning("title generation failed, keeping fallback title", exc_info=True)
+
+
+def _stream_assistant_reply(conversation, history, user_message_id, title_from=None):
     """
     Shared SSE generator for both fresh sends and regenerate: streams delta
     events as tokens arrive from Groq, then persists the assistant message and
@@ -36,6 +47,11 @@ def _stream_assistant_reply(conversation, history, user_message_id):
     disconnect (e.g. the "stop" button aborting the fetch) surfaces as a
     write failure the next time this generator is iterated, which stops
     further generation — best-effort, not guaranteed instant cancellation.
+
+    `title_from`, when given the triggering user message text, generates a
+    real contextual title once the reply is complete (only relevant for a
+    conversation's first turn — the extra Groq call happens after all delta
+    events are already sent, so it doesn't delay perceived streaming).
     """
     yield _sse(
         {
@@ -61,14 +77,19 @@ def _stream_assistant_reply(conversation, history, user_message_id):
         yield _sse({"type": "error", "error": "inference_failed"})
         return
 
+    output_text = "".join(chunks)
     assistant_message = Message.objects.create(
-        conversation=conversation, role=Message.Role.ASSISTANT, content="".join(chunks)
+        conversation=conversation, role=Message.Role.ASSISTANT, content=output_text
     )
-    conversation.save(update_fields=["updated_at"])
+
+    if title_from is not None:
+        _generate_title_for(conversation, title_from, output_text)
+    conversation.save(update_fields=["updated_at", "title"])
 
     yield _sse(
         {
             "type": "done",
+            "conversation_title": conversation.title,
             "message": {
                 "id": str(assistant_message.id),
                 "role": assistant_message.role,
@@ -88,6 +109,7 @@ class ChatView(APIView):
         serializer.is_valid(raise_exception=True)
         message_text = serializer.validated_data["message"]
         conversation_id = serializer.validated_data.get("conversation_id")
+        is_new_conversation = conversation_id is None
 
         if conversation_id:
             conversation = get_object_or_404(Conversation, id=conversation_id)
@@ -122,7 +144,10 @@ class ChatView(APIView):
         assistant_message = Message.objects.create(
             conversation=conversation, role=Message.Role.ASSISTANT, content=result["output"]
         )
-        conversation.save(update_fields=["updated_at"])
+
+        if is_new_conversation:
+            _generate_title_for(conversation, message_text, result["output"])
+        conversation.save(update_fields=["updated_at", "title"])
 
         return Response(
             {
@@ -143,6 +168,7 @@ class ChatStreamView(APIView):
         serializer.is_valid(raise_exception=True)
         message_text = serializer.validated_data["message"]
         conversation_id = serializer.validated_data.get("conversation_id")
+        is_new_conversation = conversation_id is None
 
         if conversation_id:
             conversation = get_object_or_404(Conversation, id=conversation_id)
@@ -162,7 +188,12 @@ class ChatStreamView(APIView):
         history.append({"role": "user", "content": message_text})
 
         response = StreamingHttpResponse(
-            _stream_assistant_reply(conversation, history, user_message.id),
+            _stream_assistant_reply(
+                conversation,
+                history,
+                user_message.id,
+                title_from=message_text if is_new_conversation else None,
+            ),
             content_type="text/event-stream",
         )
         response["Cache-Control"] = "no-cache"

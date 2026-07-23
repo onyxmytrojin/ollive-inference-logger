@@ -318,7 +318,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="dashboard">
+    <div className="dashboard thin-scroll">
       <div className="dashboard-header">
         <h2>Inference metrics</h2>
         <div className="window-select">
