@@ -18,3 +18,5 @@ __pycache__/
 .venv/
 venv/
 staticfiles/
+
+k8s/secret.yaml
