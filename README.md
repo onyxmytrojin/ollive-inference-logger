@@ -145,9 +145,25 @@ Notes on how the k8s setup differs from Compose:
   chat UI reads directly from the observability pipeline built for this project.
 - **Rename / search / cancel**: conversation list supports inline rename
   (double-click), client-side search, and cancelling (blocks new messages,
-  history stays readable).
+  history stays readable). Cancelled conversations are visually distinct
+  (red-tinted) and grouped into their own sidebar section rather than
+  interleaved with active ones.
+- **Groups**: sidebar folders for organizing conversations
+  (`ConversationGroup` model, `/api/groups/`). Each conversation gets a
+  hover-revealed "move to group" selector; deleting a group ungroups its
+  conversations rather than deleting them (`on_delete=SET_NULL`).
+- **Starter prompts**: a brand-new conversation shows a centered composer with
+  a few example prompts instead of an empty screen; the composer moves to its
+  normal bottom-anchored position once the first message is sent.
 - **Markdown rendering** via `react-markdown` + `remark-gfm` for assistant
   responses (code blocks, lists, tables).
+- **Contextual titles**: a new conversation's title is generated from the
+  actual exchange (`generate_title` in `groq_client.py`) via a short Groq
+  call once the first reply completes, rather than truncating the first
+  message. That call goes through the same `@log_inference` path as regular
+  chat completions — tagged `metadata.purpose: "title_generation"` — so it
+  shows up in the dashboard/logs like any other inference rather than being
+  invisible extra usage.
 
 ## Dashboard
 
@@ -260,9 +276,15 @@ e.g. a name) — see "what I'd improve" below.
 - **Frontend runs via Vite dev server**, in both Compose and Kubernetes, not a
   production build behind nginx — faster to iterate on, but not how it'd be
   deployed for real traffic.
-- **No ingress/TLS in the k8s manifests** — `LoadBalancer` Services are enough
-  to demo against a local cluster; a real deployment would front everything
+- **No ingress/TLS in the k8s manifests** — backend/frontend are `ClusterIP`,
+  reached via `kubectl port-forward`; a real deployment would front everything
   with an ingress controller and TLS termination.
+- **Title generation costs one extra Groq call per new conversation.** Only
+  triggered once per conversation (not per message) and happens after the
+  visible response has already fully streamed, so it doesn't add perceived
+  latency — but it is real extra token spend, and a hard first-message failure
+  in title generation just falls back to the truncated-message title rather
+  than blocking anything.
 
 ## What I'd improve with more time
 
