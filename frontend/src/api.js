@@ -57,6 +57,15 @@ export const api = {
   getMetricsSummary: (window) => request(`/metrics/summary/?window=${window}`),
   getMetricsTimeseries: (window) => request(`/metrics/timeseries/?window=${window}`),
 
+  listGroups: () => request("/groups/"),
+  createGroup: (name) => request("/groups/", { method: "POST", body: JSON.stringify({ name }) }),
+  deleteGroup: (id) => request(`/groups/${id}/`, { method: "DELETE" }),
+  assignGroup: (conversationId, groupId) =>
+    request(`/conversations/${conversationId}/group/`, {
+      method: "POST",
+      body: JSON.stringify({ group_id: groupId }),
+    }),
+
   sendMessage: (conversationId, message) =>
     request("/chat/", {
       method: "POST",

@@ -112,22 +112,65 @@
   letter-spacing: 0.05em;
   color: #7d8190;
   padding: 12px 10px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-section-label.cancelled-label {
+  color: #e57373;
+}
+
+.group-label {
+  padding-right: 4px;
+}
+
+.group-delete-btn {
+  background: none;
+  border: none;
+  color: #7d8190;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.group-delete-btn:hover {
+  color: #e57373;
+}
+
+.groups-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7d8190;
+  padding: 4px 10px;
+  margin-bottom: 2px;
+}
+
+.add-group-btn {
+  background: none;
+  border: none;
+  color: #7d8190;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.add-group-btn:hover {
+  color: #c7c9cf;
 }
 
 .conversation-item {
   width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: #c7c9cf;
-  padding: 10px;
-  border-radius: 6px;
-  cursor: pointer;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 4px;
+  border-radius: 6px;
 }
 
 .conversation-item:hover {
@@ -136,13 +179,57 @@
 
 .conversation-item.active {
   background: #262a33;
+}
+
+.conversation-item.cancelled {
+  background: rgba(229, 115, 115, 0.06);
+}
+
+.conversation-item.cancelled:hover {
+  background: rgba(229, 115, 115, 0.12);
+}
+
+.conversation-item-btn {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #c7c9cf;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.conversation-item.active .conversation-item-btn {
   color: white;
 }
 
+.conversation-item.cancelled .conversation-item-btn {
+  color: #d99999;
+}
+
 .conversation-title {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.group-select {
+  background: transparent;
+  border: none;
+  color: #7d8190;
+  font-size: 10px;
+  max-width: 60px;
+  opacity: 0;
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.conversation-item:hover .group-select,
+.group-select:focus {
+  opacity: 1;
 }
 
 .chat-panel {
@@ -417,4 +504,63 @@
 .composer button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px;
+}
+
+.empty-state h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #e6e6e6;
+  margin: 0;
+}
+
+.empty-state-composer {
+  width: 100%;
+  max-width: 640px;
+}
+
+.empty-state-composer .composer {
+  border-top: none;
+  padding: 0;
+}
+
+.starter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.starter-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #15171c;
+  border: 1px solid #262a33;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #c7c9cf;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.starter-chip:hover {
+  background: #1e212a;
+  border-color: #333844;
+}
+
+.starter-icon {
+  font-size: 16px;
 }
