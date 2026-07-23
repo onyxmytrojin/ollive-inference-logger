@@ -11,3 +11,10 @@ Thumbs.db
 coverage/
 .vscode/
 *.tsbuildinfo
+
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+staticfiles/
