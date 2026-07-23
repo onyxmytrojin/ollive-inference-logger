@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { api } from "./api";
+import ConversationItem from "./components/ConversationItem.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import MessageBubble from "./components/MessageBubble.jsx";
 
@@ -24,6 +25,8 @@ export default function App() {
   const filteredConversations = conversations.filter((c) =>
     (c.title || "Untitled").toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const activeConversations = filteredConversations.filter((c) => c.status !== "cancelled");
+  const cancelledConversations = filteredConversations.filter((c) => c.status === "cancelled");
   const lastMessage = messages[messages.length - 1];
   const canRegenerate =
     activeId && !isCancelled && !isStreaming && lastMessage?.role === "assistant";
@@ -230,38 +233,52 @@ export default function App() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
 
-        <ul className="conversation-list">
-          {filteredConversations.map((c) => (
-            <li key={c.id}>
-              {renamingId === c.id ? (
-                <input
-                  autoFocus
-                  className="rename-input"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={commitRename}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitRename();
-                    if (e.key === "Escape") setRenamingId(null);
-                  }}
-                />
-              ) : (
-                <button
-                  className={`conversation-item ${c.id === activeId ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("chat");
-                    selectConversation(c.id);
-                  }}
-                  onDoubleClick={(e) => startRename(c, e)}
-                  title="Double-click to rename"
-                >
-                  <span className="conversation-title">{c.title || "Untitled"}</span>
-                  {c.status === "cancelled" && <span className="badge">cancelled</span>}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="sidebar-lists">
+          <ul className="conversation-list">
+            {activeConversations.map((c) => (
+              <ConversationItem
+                key={c.id}
+                conversation={c}
+                isActive={c.id === activeId}
+                isRenaming={renamingId === c.id}
+                renameValue={renameValue}
+                onRenameChange={setRenameValue}
+                onCommitRename={commitRename}
+                onCancelRename={() => setRenamingId(null)}
+                onSelect={() => {
+                  setActiveTab("chat");
+                  selectConversation(c.id);
+                }}
+                onStartRename={(e) => startRename(c, e)}
+              />
+            ))}
+          </ul>
+
+          {cancelledConversations.length > 0 && (
+            <>
+              <div className="sidebar-section-label">Cancelled</div>
+              <ul className="conversation-list">
+                {cancelledConversations.map((c) => (
+                  <ConversationItem
+                    key={c.id}
+                    conversation={c}
+                    isActive={c.id === activeId}
+                    isRenaming={renamingId === c.id}
+                    renameValue={renameValue}
+                    onRenameChange={setRenameValue}
+                    onCommitRename={commitRename}
+                    onCancelRename={() => setRenamingId(null)}
+                    onSelect={() => {
+                      setActiveTab("chat");
+                      selectConversation(c.id);
+                    }}
+                    onStartRename={(e) => startRename(c, e)}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       </aside>
 
       {activeTab === "dashboard" ? (

@@ -73,12 +73,23 @@
   background: #1d4ed8;
 }
 
+.sidebar-lists {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .conversation-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
-  flex: 1;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7d8190;
+  padding: 12px 10px 6px;
 }
 
 .conversation-item {
@@ -110,15 +121,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.badge {
-  font-size: 10px;
-  background: #7f1d1d;
-  color: #fecaca;
-  padding: 2px 6px;
-  border-radius: 999px;
-  flex-shrink: 0;
 }
 
 .chat-panel {
