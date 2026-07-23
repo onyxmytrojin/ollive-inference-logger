@@ -27,7 +27,7 @@ metadata:
   name: frontend
   namespace: ollive
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector: { app: frontend }
   ports:
     - port: 5173

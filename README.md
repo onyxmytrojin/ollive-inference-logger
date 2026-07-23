@@ -100,9 +100,14 @@ kubectl apply -k k8s/
 kubectl get pods -n ollive -w
 ```
 
-Backend and frontend are `type: LoadBalancer` — Docker Desktop's Kubernetes
-exposes those on `localhost` automatically (no ingress controller needed for
-this scope). Find the ports with `kubectl get svc -n ollive`.
+Backend and frontend are `type: ClusterIP` — reach them with `kubectl
+port-forward` (avoids colliding with Docker Compose if both are running
+locally at once, and needs no ingress controller for this scope):
+
+```bash
+kubectl port-forward -n ollive svc/backend 18000:8000
+kubectl port-forward -n ollive svc/frontend 15173:5173
+```
 
 Run the one-time migration the same way as Compose, against the cluster:
 

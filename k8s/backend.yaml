@@ -32,7 +32,7 @@ metadata:
   name: backend
   namespace: ollive
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector: { app: backend }
   ports:
     - port: 8000
