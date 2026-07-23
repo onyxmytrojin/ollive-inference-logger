@@ -26,3 +26,7 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
 class ChatRequestSerializer(serializers.Serializer):
     conversation_id = serializers.UUIDField(required=False)
     message = serializers.CharField(min_length=1, max_length=8000)
+
+
+class ConversationRenameSerializer(serializers.Serializer):
+    title = serializers.CharField(min_length=1, max_length=200)
