@@ -4,10 +4,26 @@ from rest_framework import status as http_status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import metrics
+from .clickhouse_client import get_client
 from .kafka_producer import publish_inference_log
 from .serializers import InferenceLogSerializer
 
 logger = logging.getLogger(__name__)
+
+_MESSAGE_INFERENCE_COLUMNS = [
+    "provider",
+    "model",
+    "status",
+    "error_message",
+    "latency_ms",
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+    "request_started_at",
+    "request_completed_at",
+    "metadata",
+]
 
 
 class IngestLogView(APIView):
@@ -37,3 +53,46 @@ class IngestLogView(APIView):
             )
 
         return Response(status=http_status.HTTP_202_ACCEPTED)
+
+
+class MessageInferenceView(APIView):
+    """Backs the frontend's per-message "inspect" panel: the actual
+    latency/tokens/model/status recorded for the inference call that produced
+    a given assistant message."""
+
+    def get(self, request, message_id):
+        # message_id is a uuid.UUID (validated by the <uuid:...> URL
+        # converter before this view runs), so interpolating it is safe.
+        query = f"""
+            SELECT {", ".join(_MESSAGE_INFERENCE_COLUMNS)}
+            FROM inference_logs
+            WHERE message_id = '{message_id}'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """
+        rows = get_client().query(query).result_rows
+        if not rows:
+            return Response({"error": "not_found"}, status=http_status.HTTP_404_NOT_FOUND)
+        return Response(dict(zip(_MESSAGE_INFERENCE_COLUMNS, rows[0])))
+
+
+class MetricsSummaryView(APIView):
+    def get(self, request):
+        window = request.query_params.get("window", metrics.DEFAULT_WINDOW)
+        if window not in metrics.WINDOW_SECONDS:
+            return Response(
+                {"error": "invalid_window", "allowed": list(metrics.WINDOW_SECONDS)},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(metrics.get_summary(window))
+
+
+class MetricsTimeseriesView(APIView):
+    def get(self, request):
+        window = request.query_params.get("window", metrics.DEFAULT_WINDOW)
+        if window not in metrics.WINDOW_SECONDS:
+            return Response(
+                {"error": "invalid_window", "allowed": list(metrics.WINDOW_SECONDS)},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(metrics.get_timeseries(window))
