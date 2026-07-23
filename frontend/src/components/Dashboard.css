@@ -1,0 +1,160 @@
+.dashboard {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.dashboard-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.window-select {
+  display: flex;
+  gap: 6px;
+}
+
+.window-btn {
+  background: #1e212a;
+  border: 1px solid #262a33;
+  color: #c7c9cf;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.window-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-tile {
+  background: #15171c;
+  border: 1px solid #262a33;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #7d8190;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #e6e6e6;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value.critical {
+  color: #e66767;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.chart-card {
+  background: #15171c;
+  border: 1px solid #262a33;
+  border-radius: 10px;
+  padding: 16px;
+  position: relative;
+}
+
+.chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6e6e6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-subtitle {
+  font-size: 11px;
+  color: #7d8190;
+  margin-bottom: 10px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.legend-item {
+  font-size: 11px;
+  color: #c7c9cf;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.critical {
+  background: #e66767;
+}
+
+.chart-empty-note {
+  font-size: 12px;
+  color: #7d8190;
+  padding: 8px 0;
+}
+
+.chart-tooltip {
+  position: fixed;
+  background: #0f1115;
+  border: 1px solid #262a33;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #e6e6e6;
+  pointer-events: none;
+  z-index: 50;
+  white-space: nowrap;
+}
+
+.tooltip-label {
+  color: #7d8190;
+  margin-bottom: 4px;
+}

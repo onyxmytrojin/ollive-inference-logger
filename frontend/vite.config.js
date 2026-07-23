@@ -6,5 +6,12 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    watch: {
+      // Docker Desktop on Windows doesn't propagate native filesystem
+      // events across the bind mount, so chokidar never sees edits made
+      // from the host — polling is required for HMR to pick them up.
+      usePolling: true,
+      interval: 300,
+    },
   },
 });

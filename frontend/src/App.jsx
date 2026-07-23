@@ -1,18 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { api } from "./api";
+import Dashboard from "./components/Dashboard.jsx";
+import MessageBubble from "./components/MessageBubble.jsx";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("chat");
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+
   const bottomRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const activeConversation = conversations.find((c) => c.id === activeId) || null;
   const isCancelled = activeConversation?.status === "cancelled";
+  const filteredConversations = conversations.filter((c) =>
+    (c.title || "Untitled").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const lastMessage = messages[messages.length - 1];
+  const canRegenerate =
+    activeId && !isCancelled && !isStreaming && lastMessage?.role === "assistant";
 
   useEffect(() => {
     refreshConversations();
@@ -31,6 +45,8 @@ export default function App() {
   }
 
   async function selectConversation(id) {
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
     setError(null);
     setActiveId(id);
     try {
@@ -42,34 +58,118 @@ export default function App() {
   }
 
   function startNewConversation() {
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
     setActiveId(null);
     setMessages([]);
     setError(null);
+    setActiveTab("chat");
+  }
+
+  function appendDeltaTo(tempId, content) {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === tempId ? { ...m, content: m.content + content } : m))
+    );
+  }
+
+  function replaceMessage(tempId, message) {
+    setMessages((prev) => prev.map((m) => (m.id === tempId ? message : m)));
   }
 
   async function handleSend(e) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || sending || isCancelled) return;
+    if (!text || isStreaming || isCancelled) return;
 
-    setSending(true);
+    const tempUserId = `temp-user-${Date.now()}`;
+    const tempAssistantId = `temp-assistant-${Date.now()}-a`;
+
     setError(null);
     setInput("");
+    setIsStreaming(true);
     setMessages((prev) => [
       ...prev,
-      { id: `temp-${Date.now()}`, role: "user", content: text, created_at: new Date().toISOString() },
+      { id: tempUserId, role: "user", content: text, created_at: new Date().toISOString() },
+      { id: tempAssistantId, role: "assistant", content: "", created_at: new Date().toISOString() },
     ]);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const data = await api.sendMessage(activeId, text);
-      setActiveId(data.conversation_id);
-      setMessages((prev) => [...prev, data.message]);
-      await refreshConversations();
+      await api.streamChat(
+        activeId,
+        text,
+        {
+          onStart: (payload) => {
+            if (!activeId) setActiveId(payload.conversation_id);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === tempUserId ? { ...m, id: payload.message_id } : m))
+            );
+          },
+          onDelta: (payload) => appendDeltaTo(tempAssistantId, payload.content),
+          onDone: (payload) => {
+            replaceMessage(tempAssistantId, payload.message);
+            refreshConversations();
+          },
+          onError: (payload) => setError(payload?.error || "inference_failed"),
+        },
+        controller.signal
+      );
     } catch (err) {
-      setError(err.message);
+      if (err.name !== "AbortError") setError(err.message);
     } finally {
-      setSending(false);
+      setIsStreaming(false);
+      abortControllerRef.current = null;
     }
+  }
+
+  async function handleRegenerate() {
+    if (!activeId || isStreaming) return;
+    setError(null);
+    setIsStreaming(true);
+
+    const tempAssistantId = `temp-assistant-${Date.now()}-r`;
+    setMessages((prev) => {
+      const updated = [...prev];
+      if (updated.length && updated[updated.length - 1].role === "assistant") {
+        updated.pop();
+      }
+      updated.push({
+        id: tempAssistantId,
+        role: "assistant",
+        content: "",
+        created_at: new Date().toISOString(),
+      });
+      return updated;
+    });
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      await api.regenerate(
+        activeId,
+        {
+          onDelta: (payload) => appendDeltaTo(tempAssistantId, payload.content),
+          onDone: (payload) => {
+            replaceMessage(tempAssistantId, payload.message);
+            refreshConversations();
+          },
+          onError: (payload) => setError(payload?.error || "inference_failed"),
+        },
+        controller.signal
+      );
+    } catch (err) {
+      if (err.name !== "AbortError") setError(err.message);
+    } finally {
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  }
+
+  function handleStop() {
+    abortControllerRef.current?.abort();
   }
 
   async function handleCancel() {
@@ -82,65 +182,142 @@ export default function App() {
     }
   }
 
+  function startRename(conv, e) {
+    e.stopPropagation();
+    setRenamingId(conv.id);
+    setRenameValue(conv.title || "");
+  }
+
+  async function commitRename() {
+    const title = renameValue.trim();
+    const id = renamingId;
+    setRenamingId(null);
+    if (!title || !id) return;
+    try {
+      await api.renameConversation(id, title);
+      await refreshConversations();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
+        <div className="tab-switch">
+          <button
+            className={`tab-btn ${activeTab === "chat" ? "active" : ""}`}
+            onClick={() => setActiveTab("chat")}
+          >
+            Chat
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveTab("dashboard")}
+          >
+            Dashboard
+          </button>
+        </div>
+
         <button className="new-chat-btn" onClick={startNewConversation}>
           + New conversation
         </button>
+
+        <input
+          className="search-input"
+          placeholder="Search conversations…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+
         <ul className="conversation-list">
-          {conversations.map((c) => (
+          {filteredConversations.map((c) => (
             <li key={c.id}>
-              <button
-                className={`conversation-item ${c.id === activeId ? "active" : ""}`}
-                onClick={() => selectConversation(c.id)}
-              >
-                <span className="conversation-title">{c.title || "Untitled"}</span>
-                {c.status === "cancelled" && <span className="badge">cancelled</span>}
-              </button>
+              {renamingId === c.id ? (
+                <input
+                  autoFocus
+                  className="rename-input"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenamingId(null);
+                  }}
+                />
+              ) : (
+                <button
+                  className={`conversation-item ${c.id === activeId ? "active" : ""}`}
+                  onClick={() => {
+                    setActiveTab("chat");
+                    selectConversation(c.id);
+                  }}
+                  onDoubleClick={(e) => startRename(c, e)}
+                  title="Double-click to rename"
+                >
+                  <span className="conversation-title">{c.title || "Untitled"}</span>
+                  {c.status === "cancelled" && <span className="badge">cancelled</span>}
+                </button>
+              )}
             </li>
           ))}
         </ul>
       </aside>
 
-      <main className="chat-panel">
-        <header className="chat-header">
-          <h1>Ollive Chatbot</h1>
-          {activeConversation && !isCancelled && (
-            <button className="cancel-btn" onClick={handleCancel}>
-              Cancel conversation
-            </button>
-          )}
-        </header>
+      {activeTab === "dashboard" ? (
+        <Dashboard />
+      ) : (
+        <main className="chat-panel">
+          <header className="chat-header">
+            <h1>Ollive Chatbot</h1>
+            {activeConversation && !isCancelled && (
+              <button className="cancel-btn" onClick={handleCancel}>
+                Cancel conversation
+              </button>
+            )}
+          </header>
 
-        <div className="messages">
-          {messages.map((m) => (
-            <div key={m.id} className={`message ${m.role}`}>
-              <div className="bubble">{m.content}</div>
-            </div>
-          ))}
-          {sending && (
-            <div className="message assistant">
-              <div className="bubble typing">…</div>
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
+          <div className="messages">
+            {messages.map((m, i) => (
+              <MessageBubble
+                key={m.id}
+                message={m}
+                precedingUserMessageId={
+                  m.role === "assistant" &&
+                  messages[i - 1]?.role === "user" &&
+                  !String(messages[i - 1].id).startsWith("temp-")
+                    ? messages[i - 1].id
+                    : null
+                }
+                isLastAssistant={i === messages.length - 1 && canRegenerate}
+                onRegenerate={i === messages.length - 1 ? handleRegenerate : null}
+                regenerating={isStreaming && i === messages.length - 1}
+              />
+            ))}
+            <div ref={bottomRef} />
+          </div>
 
-        {error && <div className="error-banner">{error}</div>}
+          {error && <div className="error-banner">{error}</div>}
 
-        <form className="composer" onSubmit={handleSend}>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={isCancelled ? "This conversation is cancelled" : "Type a message..."}
-            disabled={sending || isCancelled}
-          />
-          <button type="submit" disabled={sending || isCancelled}>
-            Send
-          </button>
-        </form>
-      </main>
+          <form className="composer" onSubmit={handleSend}>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={isCancelled ? "This conversation is cancelled" : "Type a message..."}
+              disabled={isStreaming || isCancelled}
+            />
+            {isStreaming ? (
+              <button type="button" className="stop-btn" onClick={handleStop}>
+                Stop
+              </button>
+            ) : (
+              <button type="submit" disabled={isCancelled}>
+                Send
+              </button>
+            )}
+          </form>
+        </main>
+      )}
     </div>
   );
 }
