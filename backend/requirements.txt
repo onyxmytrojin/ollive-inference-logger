@@ -1,0 +1,10 @@
+Django==5.0.7
+djangorestframework==3.15.2
+django-cors-headers==4.4.0
+psycopg2-binary==2.9.9
+groq==0.9.0
+httpx==0.27.2
+requests==2.32.3
+confluent-kafka==2.5.0
+clickhouse-connect==0.7.19
+gunicorn==22.0.0
