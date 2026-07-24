@@ -37,11 +37,35 @@
   color: white;
 }
 
+.hero-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+
+.gauge-card {
+  background: #15171c;
+  border: 1px solid #262a33;
+  border-radius: 10px;
+  padding: 16px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gauge-svg {
+  margin-top: 8px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
 .stat-tiles {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
-  margin-bottom: 24px;
+  align-content: start;
 }
 
 .stat-tile {

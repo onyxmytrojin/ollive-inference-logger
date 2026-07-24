@@ -11,8 +11,11 @@ const WINDOWS = [
 
 const COLOR = {
   seriesBlue: "#3987e5",
+  seriesBlueDark: "#1c5cab",
   seriesOrange: "#d95926",
   statusCritical: "#e66767",
+  statusGood: "#22c55e",
+  statusWarning: "#fab219",
   gridline: "#262a33",
   axis: "#3a3f4b",
   textPrimary: "#e6e6e6",
@@ -133,6 +136,12 @@ function ThroughputChart({ data }) {
       <div className="chart-title">Throughput</div>
       <div className="chart-subtitle">Requests per bucket</div>
       <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="chart-svg">
+        <defs>
+          <linearGradient id="throughputBar" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={COLOR.seriesBlue} />
+            <stop offset="100%" stopColor={COLOR.seriesBlueDark} />
+          </linearGradient>
+        </defs>
         <GridAndAxis maxValue={maxValue} formatTick={(v) => Math.round(v)} />
         {data.map((d, i) => {
           const x = slotX(i, data.length) - barW / 2;
@@ -145,9 +154,10 @@ function ThroughputChart({ data }) {
               y={y}
               width={barW}
               height={Math.max(h, 0)}
-              rx={2}
-              fill={COLOR.seriesBlue}
-              opacity={hover?.index === i ? 1 : 0.85}
+              rx={4}
+              fill="url(#throughputBar)"
+              opacity={hover?.index === i ? 1 : 0.9}
+              style={{ transition: "opacity 0.15s" }}
             />
           );
         })}
@@ -177,6 +187,14 @@ function LatencyChart({ data }) {
       .join(" ");
   }
 
+  function areaPath(key) {
+    const baseline = CHART_H - PAD.bottom;
+    const line = data.map(
+      (d, i) => `${i === 0 ? "M" : "L"} ${slotX(i, data.length)} ${scaleY(d[key] || 0, maxValue)}`
+    );
+    return `${line.join(" ")} L ${slotX(data.length - 1, data.length)} ${baseline} L ${slotX(0, data.length)} ${baseline} Z`;
+  }
+
   return (
     <div className="chart-card">
       <div className="chart-title">Latency</div>
@@ -190,9 +208,31 @@ function LatencyChart({ data }) {
         </span>
       </div>
       <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="chart-svg">
+        <defs>
+          <linearGradient id="latencyArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={COLOR.seriesBlue} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={COLOR.seriesBlue} stopOpacity="0" />
+          </linearGradient>
+        </defs>
         <GridAndAxis maxValue={maxValue} formatTick={(v) => `${Math.round(v)}ms`} />
-        <path d={linePath("avg_latency_ms")} fill="none" stroke={COLOR.seriesBlue} strokeWidth={2} />
-        <path d={linePath("p95_latency_ms")} fill="none" stroke={COLOR.seriesOrange} strokeWidth={2} />
+        <path d={areaPath("avg_latency_ms")} fill="url(#latencyArea)" stroke="none" />
+        <path
+          d={linePath("avg_latency_ms")}
+          fill="none"
+          stroke={COLOR.seriesBlue}
+          strokeWidth={2.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <path
+          d={linePath("p95_latency_ms")}
+          fill="none"
+          stroke={COLOR.seriesOrange}
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          strokeDasharray="5,4"
+        />
         {hover && (
           <line
             x1={slotX(hover.index, data.length)}
@@ -233,6 +273,12 @@ function ErrorsChart({ data }) {
       </div>
       <div className="chart-subtitle">Failed inference calls per bucket</div>
       <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="chart-svg">
+        <defs>
+          <linearGradient id="errorsBar" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f08a8a" />
+            <stop offset="100%" stopColor={COLOR.statusCritical} />
+          </linearGradient>
+        </defs>
         <GridAndAxis maxValue={maxValue} formatTick={(v) => Math.round(v)} />
         {data.map((d, i) => {
           const x = slotX(i, data.length) - barW / 2;
@@ -245,9 +291,10 @@ function ErrorsChart({ data }) {
               y={y}
               width={barW}
               height={Math.max(h, 0)}
-              rx={2}
-              fill={COLOR.statusCritical}
-              opacity={hover?.index === i ? 1 : 0.85}
+              rx={4}
+              fill="url(#errorsBar)"
+              opacity={hover?.index === i ? 1 : 0.9}
+              style={{ transition: "opacity 0.15s" }}
             />
           );
         })}
@@ -271,6 +318,64 @@ function StatTile({ label, value, tone }) {
     <div className="stat-tile">
       <div className="stat-label">{label}</div>
       <div className={`stat-value ${tone || ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function SuccessGauge({ successRate, requestCount }) {
+  const size = 148;
+  const strokeWidth = 12;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = requestCount > 0 ? successRate : null;
+  const offset = pct == null ? circumference : circumference * (1 - pct);
+  const color =
+    pct == null
+      ? COLOR.textMuted
+      : pct >= 0.95
+        ? COLOR.statusGood
+        : pct >= 0.8
+          ? COLOR.statusWarning
+          : COLOR.statusCritical;
+
+  return (
+    <div className="gauge-card">
+      <div className="chart-title">Success rate</div>
+      <div className="chart-subtitle">Successful vs failed inference calls</div>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="gauge-svg">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={COLOR.gridline}
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: "stroke-dashoffset 0.4s ease, stroke 0.4s ease" }}
+        />
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="26"
+          fontWeight="700"
+          fill={COLOR.textPrimary}
+        >
+          {pct == null ? "—" : `${Math.round(pct * 100)}%`}
+        </text>
+      </svg>
     </div>
   );
 }
@@ -337,16 +442,22 @@ export default function Dashboard() {
       {error && <div className="error-banner">{error}</div>}
 
       {!error && summary && (
-        <div className="stat-tiles">
-          <StatTile label="Total requests" value={summary.total_requests} />
-          <StatTile
-            label="Error rate"
-            value={errorRatePct}
-            tone={summary.error_rate > 0.05 ? "critical" : undefined}
+        <div className="hero-row">
+          <SuccessGauge
+            successRate={1 - summary.error_rate}
+            requestCount={summary.total_requests}
           />
-          <StatTile label="Avg latency" value={summary.avg_latency_ms ? `${Math.round(summary.avg_latency_ms)}ms` : "—"} />
-          <StatTile label="P95 latency" value={summary.p95_latency_ms ? `${Math.round(summary.p95_latency_ms)}ms` : "—"} />
-          <StatTile label="Total tokens" value={summary.total_tokens.toLocaleString()} />
+          <div className="stat-tiles">
+            <StatTile label="Total requests" value={summary.total_requests} />
+            <StatTile
+              label="Error rate"
+              value={errorRatePct}
+              tone={summary.error_rate > 0.05 ? "critical" : undefined}
+            />
+            <StatTile label="Avg latency" value={summary.avg_latency_ms ? `${Math.round(summary.avg_latency_ms)}ms` : "—"} />
+            <StatTile label="P95 latency" value={summary.p95_latency_ms ? `${Math.round(summary.p95_latency_ms)}ms` : "—"} />
+            <StatTile label="Total tokens" value={summary.total_tokens.toLocaleString()} />
+          </div>
         </div>
       )}
 
