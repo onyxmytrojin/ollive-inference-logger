@@ -22,8 +22,13 @@ responses, and a Kubernetes deployment.
 
 | | |
 |---|---|
-| ![New conversation with starter prompts](docs/screenshots/01-new-conversation.jpg) A fresh conversation: centered composer + starter prompts, sidebar groups | ![Markdown chat response](docs/screenshots/02-chat-markdown.jpg) Streamed response rendered as markdown, auto-generated conversation title |
-| ![Per-message inspect panel](docs/screenshots/03-inspect-panel.jpg) "Inspect" pulls the actual latency/tokens/model logged for that response, straight from ClickHouse | ![Dashboard with success-rate gauge and charts](docs/screenshots/04-dashboard.jpg) Dashboard: success-rate gauge, throughput, latency (avg/p95), and error charts — all live off ClickHouse |
+| ![New conversation with starter prompts](docs/screenshots/01-new-conversation.jpg) **New conversation** — centered composer + starter prompts, sidebar groups | ![Markdown chat response](docs/screenshots/02-chat-markdown.jpg) **Markdown rendering** — streamed response with an auto-generated conversation title |
+| ![Per-message inspect panel](docs/screenshots/03-inspect-panel.jpg) **Inspect panel** — actual latency/tokens/model logged for that response, read straight from ClickHouse | ![Streaming in progress](docs/screenshots/07-cancelled-conversation.jpg) **Cancel** — blocks new messages, history stays fully readable |
+| ![Search](docs/screenshots/06-search.jpg) **Search** — client-side filtering across conversations and groups | ![Dashboard, 1 hour window](docs/screenshots/04-dashboard.jpg) **Dashboard (1h)** — success-rate gauge, throughput, latency (avg/p95), and error charts, all live off ClickHouse |
+| ![Dashboard, 24 hour window](docs/screenshots/05-dashboard-24h.jpg) **Dashboard (24h)** — same charts over a longer window, showing the real error/latency variance across the session | ![PII redaction proof](docs/screenshots/08-pii-redaction.jpg) **PII redaction** — real chat content vs. what actually landed in `inference_logs` for the same message |
+| ![Kubernetes pods running](docs/screenshots/09-kubernetes-pods.jpg) **Kubernetes** — the full stack (Postgres, ClickHouse, Kafka, backend, consumer, frontend) running on a self-hosted cluster | |
+
+<sub>Screenshots 08–09 are rendered from real command output/query results (styled to match the app's theme) rather than raw terminal captures — the data itself (redacted log content, pod status) is exactly what the commands returned.</sub>
 
 ## Architecture
 
