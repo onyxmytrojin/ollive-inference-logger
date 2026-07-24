@@ -3,7 +3,9 @@ set -e
 
 if [ "$1" = "web" ]; then
   python manage.py migrate --noinput
-  exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+  # Render (and similar PaaS) inject $PORT and expect the app to bind to it;
+  # local docker-compose/k8s don't set it, so this falls back to 8000.
+  exec gunicorn config.wsgi:application --bind "0.0.0.0:${PORT:-8000}" --workers 3
 elif [ "$1" = "worker" ]; then
   exec python manage.py consume_inference_logs
 else

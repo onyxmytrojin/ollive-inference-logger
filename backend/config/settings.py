@@ -33,6 +33,11 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "ollive"),
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        # Managed Postgres (Neon, etc.) requires SSL; local/k8s Postgres doesn't
+        # need it, so this is opt-in via POSTGRES_SSLMODE rather than always-on.
+        "OPTIONS": (
+            {"sslmode": os.environ["POSTGRES_SSLMODE"]} if "POSTGRES_SSLMODE" in os.environ else {}
+        ),
     }
 }
 
@@ -64,6 +69,12 @@ INGEST_URL = os.environ.get("INGEST_URL", "http://localhost:8000/api/ingest/")
 # --- Kafka (ingestion -> consumer event bus) ---
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 KAFKA_INFERENCE_LOGS_TOPIC = os.environ.get("KAFKA_INFERENCE_LOGS_TOPIC", "inference-logs")
+# Local/k8s Kafka runs PLAINTEXT with no auth; managed brokers (Upstash, etc.)
+# need SASL_SSL — opt-in via KAFKA_SECURITY_PROTOCOL so the default is unchanged.
+KAFKA_SECURITY_PROTOCOL = os.environ.get("KAFKA_SECURITY_PROTOCOL")
+KAFKA_SASL_MECHANISM = os.environ.get("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
+KAFKA_SASL_USERNAME = os.environ.get("KAFKA_SASL_USERNAME", "")
+KAFKA_SASL_PASSWORD = os.environ.get("KAFKA_SASL_PASSWORD", "")
 
 # --- ClickHouse (analytical store for inference_logs) ---
 CLICKHOUSE_HOST = os.environ.get("CLICKHOUSE_HOST", "localhost")

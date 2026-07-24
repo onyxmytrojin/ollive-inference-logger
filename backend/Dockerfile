@@ -17,3 +17,6 @@ COPY . .
 RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
+# Platforms that run the image directly (no docker-compose `command:` override,
+# e.g. Render) need a default — docker-compose/k8s still override this explicitly.
+CMD ["web"]

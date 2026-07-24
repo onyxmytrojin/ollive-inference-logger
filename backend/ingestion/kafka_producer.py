@@ -10,7 +10,17 @@ logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=1)
 def get_producer() -> Producer:
-    return Producer({"bootstrap.servers": settings.KAFKA_BOOTSTRAP_SERVERS})
+    config = {"bootstrap.servers": settings.KAFKA_BOOTSTRAP_SERVERS}
+    if settings.KAFKA_SECURITY_PROTOCOL:
+        config.update(
+            {
+                "security.protocol": settings.KAFKA_SECURITY_PROTOCOL,
+                "sasl.mechanism": settings.KAFKA_SASL_MECHANISM,
+                "sasl.username": settings.KAFKA_SASL_USERNAME,
+                "sasl.password": settings.KAFKA_SASL_PASSWORD,
+            }
+        )
+    return Producer(config)
 
 
 def _delivery_callback(err, _msg):
