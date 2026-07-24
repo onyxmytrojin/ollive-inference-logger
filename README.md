@@ -18,6 +18,13 @@ responses, and a Kubernetes deployment.
 - **Deployment**: one-command Docker Compose for local dev, Kubernetes manifests
   for a self-hosted cluster
 
+## Screenshots
+
+| | |
+|---|---|
+| ![New conversation with starter prompts](docs/screenshots/01-new-conversation.jpg) A fresh conversation: centered composer + starter prompts, sidebar groups | ![Markdown chat response](docs/screenshots/02-chat-markdown.jpg) Streamed response rendered as markdown, auto-generated conversation title |
+| ![Per-message inspect panel](docs/screenshots/03-inspect-panel.jpg) "Inspect" pulls the actual latency/tokens/model logged for that response, straight from ClickHouse | ![Dashboard with success-rate gauge and charts](docs/screenshots/04-dashboard.jpg) Dashboard: success-rate gauge, throughput, latency (avg/p95), and error charts — all live off ClickHouse |
+
 ## Architecture
 
 ```
