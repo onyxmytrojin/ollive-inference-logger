@@ -95,6 +95,30 @@
   background: #1d4ed8;
 }
 
+.sidebar-groups {
+  max-height: 35vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #262a33;
+  padding-bottom: 6px;
+}
+
+.group-block {
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+
+.group-block.drag-over {
+  background: rgba(37, 99, 235, 0.12);
+  outline: 1px dashed #2563eb;
+}
+
+.chats-drop-zone.drag-over {
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 6px;
+}
+
 .sidebar-lists {
   flex: 1;
   overflow-y: auto;
@@ -117,9 +141,6 @@
   justify-content: space-between;
 }
 
-.sidebar-section-label.cancelled-label {
-  color: #e57373;
-}
 
 .group-label {
   padding-right: 4px;
@@ -182,11 +203,12 @@
 }
 
 .conversation-item.cancelled {
-  background: rgba(229, 115, 115, 0.06);
+  opacity: 0.55;
 }
 
 .conversation-item.cancelled:hover {
-  background: rgba(229, 115, 115, 0.12);
+  opacity: 0.8;
+  background: #1e212a;
 }
 
 .conversation-item-btn {
@@ -205,9 +227,6 @@
   color: white;
 }
 
-.conversation-item.cancelled .conversation-item-btn {
-  color: #d99999;
-}
 
 .conversation-title {
   display: block;
@@ -216,21 +235,6 @@
   white-space: nowrap;
 }
 
-.group-select {
-  background: transparent;
-  border: none;
-  color: #7d8190;
-  font-size: 10px;
-  max-width: 60px;
-  opacity: 0;
-  cursor: pointer;
-  margin-right: 4px;
-}
-
-.conversation-item:hover .group-select,
-.group-select:focus {
-  opacity: 1;
-}
 
 .chat-panel {
   flex: 1;

@@ -26,6 +26,7 @@ export default function App() {
   const [renameValue, setRenameValue] = useState("");
   const [showNewGroupInput, setShowNewGroupInput] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [dragOverTarget, setDragOverTarget] = useState(null);
 
   const bottomRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -268,6 +269,18 @@ export default function App() {
     }
   }
 
+  function handleDragStart(e, conversationId) {
+    e.dataTransfer.setData("text/plain", conversationId);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  async function handleDropOnGroup(e, groupId) {
+    e.preventDefault();
+    const conversationId = e.dataTransfer.getData("text/plain");
+    setDragOverTarget(null);
+    if (conversationId) await handleMoveToGroup(conversationId, groupId);
+  }
+
   function renderConversationItem(c) {
     return (
       <ConversationItem
@@ -284,8 +297,8 @@ export default function App() {
           selectConversation(c.id);
         }}
         onStartRename={(e) => startRename(c, e)}
-        groups={groups}
-        onMoveToGroup={(groupId) => handleMoveToGroup(c.id, groupId)}
+        draggable={c.status !== "cancelled"}
+        onDragStart={(e) => handleDragStart(e, c.id)}
       />
     );
   }
@@ -366,33 +379,59 @@ export default function App() {
           </form>
         )}
 
-        <div className="sidebar-lists thin-scroll">
-          {groupedActive.map(({ group, conversations: groupConversations }) => (
-            <div key={group.id}>
-              <div className="sidebar-section-label group-label">
-                <span>{group.name}</span>
-                <button
-                  className="group-delete-btn"
-                  onClick={(e) => handleDeleteGroup(group.id, e)}
-                  title="Delete group"
-                >
-                  ×
-                </button>
+        {groups.length > 0 && (
+          <div className="sidebar-groups thin-scroll">
+            {groupedActive.map(({ group, conversations: groupConversations }) => (
+              <div
+                key={group.id}
+                className={`group-block ${dragOverTarget === group.id ? "drag-over" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverTarget(group.id);
+                }}
+                onDragLeave={() =>
+                  setDragOverTarget((t) => (t === group.id ? null : t))
+                }
+                onDrop={(e) => handleDropOnGroup(e, group.id)}
+              >
+                <div className="sidebar-section-label group-label">
+                  <span>📁 {group.name}</span>
+                  <button
+                    className="group-delete-btn"
+                    onClick={(e) => handleDeleteGroup(group.id, e)}
+                    title="Delete group"
+                  >
+                    ×
+                  </button>
+                </div>
+                <ul className="conversation-list">
+                  {groupConversations.map(renderConversationItem)}
+                </ul>
               </div>
-              <ul className="conversation-list">
-                {groupConversations.map(renderConversationItem)}
-              </ul>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
 
-          {groups.length > 0 && ungroupedActive.length > 0 && (
-            <div className="sidebar-section-label">Chats</div>
-          )}
-          <ul className="conversation-list">{ungroupedActive.map(renderConversationItem)}</ul>
+        <div className="sidebar-lists thin-scroll">
+          <div
+            className={`chats-drop-zone ${dragOverTarget === "ungrouped" ? "drag-over" : ""}`}
+            onDragOver={(e) => {
+              if (groups.length === 0) return;
+              e.preventDefault();
+              setDragOverTarget("ungrouped");
+            }}
+            onDragLeave={() => setDragOverTarget((t) => (t === "ungrouped" ? null : t))}
+            onDrop={(e) => handleDropOnGroup(e, null)}
+          >
+            {groups.length > 0 && ungroupedActive.length > 0 && (
+              <div className="sidebar-section-label">Chats</div>
+            )}
+            <ul className="conversation-list">{ungroupedActive.map(renderConversationItem)}</ul>
+          </div>
 
           {cancelledConversations.length > 0 && (
             <>
-              <div className="sidebar-section-label cancelled-label">Cancelled</div>
+              <div className="sidebar-section-label">Cancelled</div>
               <ul className="conversation-list">
                 {cancelledConversations.map(renderConversationItem)}
               </ul>

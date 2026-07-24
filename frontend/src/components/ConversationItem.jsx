@@ -8,8 +8,8 @@ export default function ConversationItem({
   onCancelRename,
   onSelect,
   onStartRename,
-  groups,
-  onMoveToGroup,
+  draggable,
+  onDragStart,
 }) {
   const isCancelled = conversation.status === "cancelled";
 
@@ -33,7 +33,11 @@ export default function ConversationItem({
 
   return (
     <li>
-      <div className={`conversation-item ${isActive ? "active" : ""} ${isCancelled ? "cancelled" : ""}`}>
+      <div
+        className={`conversation-item ${isActive ? "active" : ""} ${isCancelled ? "cancelled" : ""}`}
+        draggable={draggable}
+        onDragStart={onDragStart}
+      >
         <button
           className="conversation-item-btn"
           onClick={onSelect}
@@ -42,23 +46,6 @@ export default function ConversationItem({
         >
           <span className="conversation-title">{conversation.title || "Untitled"}</span>
         </button>
-
-        {!isCancelled && groups && onMoveToGroup && (
-          <select
-            className="group-select"
-            value={conversation.group_id || ""}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => onMoveToGroup(e.target.value || null)}
-            title="Move to group"
-          >
-            <option value="">No group</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        )}
       </div>
     </li>
   );
